@@ -1,7 +1,7 @@
 use clap::{Parser, Subcommand};
 
 mod core;
-use core::{metrics, format, anomaly, history};
+use core::{metrics, format, anomaly, history, explain};
 
 #[derive(Parser)]
 #[command(name = "pulse")]
@@ -63,6 +63,11 @@ fn main(){
 
                                 if result.cpu_anomaly{
                                     println!("      CPU anomaly (z-score: {:.2})", result.cpu_score);
+                                }
+
+                                let explanations = explain::explain_anomaly(&p.name, &result);
+                                for line in explanations{
+                                    println!("      -> {}", line);
                                 }
                             }else{
                                 println!("Behavior: Normal");
