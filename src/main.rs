@@ -1,7 +1,7 @@
 use clap::{Parser, Subcommand};
 
 mod core;
-use core::{metrics, format, anomaly, history, explain};
+use core::{metrics, format, anomaly, history, explain, trend};
 
 #[derive(Parser)]
 #[command(name = "pulse")]
@@ -50,6 +50,34 @@ fn main(){
                     println!("  CPU: {}", format::format_cpu(p.cpu_usage));
                     
                     if let Some(history) = history_store.processes.get(&p.name){
+                        // General Trend
+                        if let Some(trend_result) = trend::detect_trend(&history){
+                            match trend_result.memory_trend {
+                                trend::TrendKind::Increasing => {
+                                    println!("  📈Memory trend: Increasing(Possible leak)");
+                                }
+                                trend::TrendKind::Decreasing => {
+                                    println!("  📉Memory trend: Decreasing");
+                                }
+                                trend::TrendKind::Stable => {
+                                    println!("  ➖Memory trend: Stable");
+                                }
+                            }
+
+                            match trend_result.cpu_trend {
+                                trend::TrendKind::Increasing => {
+                                    println!("  CPU trend: Increasing");
+                                }
+                                trend::TrendKind::Decreasing => {
+                                    println!("  CPU trend: Decreasing");
+                                }
+                                trend::TrendKind::Stable => {
+                                    println!("  ➖CPU trend: Stable");
+                                }
+                            }
+                        }
+
+                        // Anomaly detected
                         if let Some(result) = anomaly::detect_anomaly(
                             history, 
                             p.memory, 
