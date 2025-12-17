@@ -5,3 +5,4 @@ pub mod predict;
 pub mod explain;
 pub mod format;
 pub mod trend;
+pub mod ui;

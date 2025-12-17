@@ -1,7 +1,7 @@
 use clap::{Parser, Subcommand};
 
 mod core;
-use core::{metrics, format, anomaly, history, explain, trend};
+use core::{metrics, format, anomaly, history, explain, trend, ui};
 
 #[derive(Parser)]
 #[command(name = "pulse")]
@@ -44,35 +44,37 @@ fn main(){
                 println!("No process named '{}' found", process);
             }else{
                 for p in processes{
-                    println!("PID {}", p.pid);
-                    println!("  Name: {}", p.name);
-                    println!("  Memory: {}", format::format_memory_kb(p.memory));
-                    println!("  CPU: {}", format::format_cpu(p.cpu_usage));
+                    ui::section(&format!("Process: {} (PID {})", p.name, p.pid));
+
+                    ui::kv("Memory", &format::format_memory_kb(p.memory));
+                    ui::kv("CPU", &format::format_cpu(p.cpu_usage));
                     
                     if let Some(history) = history_store.processes.get(&p.name){
                         // General Trend
                         if let Some(trend_result) = trend::detect_trend(&history){
+                            ui::section("Trend");
+                            
                             match trend_result.memory_trend {
                                 trend::TrendKind::Increasing => {
-                                    println!("  📈Memory trend: Increasing(Possible leak)");
+                                    println!("📈Memory trend: Increasing(Possible leak)");
                                 }
                                 trend::TrendKind::Decreasing => {
-                                    println!("  📉Memory trend: Decreasing");
+                                    println!("📉Memory trend: Decreasing");
                                 }
                                 trend::TrendKind::Stable => {
-                                    println!("  ➖Memory trend: Stable");
+                                    println!("➖Memory trend: Stable");
                                 }
                             }
 
                             match trend_result.cpu_trend {
                                 trend::TrendKind::Increasing => {
-                                    println!("  CPU trend: Increasing");
+                                    println!("📈CPU trend: Increasing");
                                 }
                                 trend::TrendKind::Decreasing => {
-                                    println!("  CPU trend: Decreasing");
+                                    println!("📉CPU trend: Decreasing");
                                 }
                                 trend::TrendKind::Stable => {
-                                    println!("  ➖CPU trend: Stable");
+                                    println!("➖CPU trend: Stable");
                                 }
                             }
                         }
@@ -83,19 +85,19 @@ fn main(){
                             p.memory, 
                             p.cpu_usage,){
                             if result.memory_anomaly || result.cpu_anomaly{
-                                println!("  ⚠️  Anomaly detected");
+                                ui::section("⚠️Anomaly");
 
                                 if result.memory_anomaly{
-                                    println!("      Memory anomaly (z-score: {:.2})", result.memory_score);
+                                    println!("Memory anomaly (z-score: {:.2})", result.memory_score);
                                 }
 
                                 if result.cpu_anomaly{
-                                    println!("      CPU anomaly (z-score: {:.2})", result.cpu_score);
+                                    println!("CPU anomaly (z-score: {:.2})", result.cpu_score);
                                 }
 
                                 let explanations = explain::explain_anomaly(&p.name, &result);
                                 for line in explanations{
-                                    println!("      -> {}", line);
+                                    println!("-> {}", line);
                                 }
                             }else{
                                 println!("Behavior: Normal");
