@@ -1,7 +1,7 @@
 use clap::{Parser, Subcommand};
 
 mod core;
-use core::{metrics, format};
+use core::{metrics, format, anomaly, history};
 
 #[derive(Parser)]
 #[command(name = "pulse")]
@@ -38,6 +38,8 @@ fn main(){
         Commands::Inspect { process } => {
             let processes = metrics::inspect_process(&process);
 
+            let history_store = history::load_history();
+
             if processes.is_empty(){
                 println!("No process named '{}' found", process);
             }else{
@@ -46,6 +48,31 @@ fn main(){
                     println!("  Name: {}", p.name);
                     println!("  Memory: {}", format::format_memory_kb(p.memory));
                     println!("  CPU: {}", format::format_cpu(p.cpu_usage));
+                    
+                    if let Some(history) = history_store.processes.get(&p.name){
+                        if let Some(result) = anomaly::detect_anomaly(
+                            history, 
+                            p.memory, 
+                            p.cpu_usage,){
+                            if result.memory_anomaly || result.cpu_anomaly{
+                                println!("  ⚠️  Anomaly detected");
+
+                                if result.memory_anomaly{
+                                    println!("      Memory anomaly (z-score: {:.2})", result.memory_score);
+                                }
+
+                                if result.cpu_anomaly{
+                                    println!("      CPU anomaly (z-score: {:.2})", result.cpu_score);
+                                }
+                            }else{
+                                println!("Behavior: Normal");
+                            }
+                        }else {
+                            println!("Behavior: Learning Baseline...");
+                        }
+                    }else {
+                        println!("Behavior: No history yet!");
+                    }
                     println!();
                 }
             }

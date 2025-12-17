@@ -32,7 +32,7 @@ pub fn system_snapshot() -> SystemSnapshot{
 pub fn inspect_process(name: &str) -> Vec<ProcessSnapshot> {
     let mut system = System::new_all();
     system.refresh_processes();
-    thread::sleep(Duration::from_millis(200));
+    thread::sleep(Duration::from_millis(500));
     system.refresh_processes();
     
     // system.refresh_all();
