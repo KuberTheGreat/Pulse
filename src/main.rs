@@ -1,7 +1,7 @@
 use clap::{Parser, Subcommand};
 
 mod core;
-use core::{metrics, format, anomaly, history, explain, trend, ui};
+use core::{metrics, format, anomaly, history, explain, trend, ui, predict};
 
 #[derive(Parser)]
 #[command(name = "pulse")]
@@ -78,6 +78,24 @@ fn main(){
                                 }
                                 trend::TrendKind::Stable => {
                                     println!("➖CPU trend: Stable");
+                                }
+                            }
+
+                            // Predictive Analysis
+                            if let Some(prediction) = predict::build_prediction(
+                                p.memory as f64, 
+                                history.iter().map(|h| h.memory as f64).sum::<f64>() / history.len() as f64, 
+                                {
+                                    let mean = history.iter().map(|h| h.memory as f64).sum::<f64>() / history.len() as f64;
+                                    let variance = history.iter()
+                                        .map(|h| (h.memory as f64 - mean).powi(2))
+                                        .sum::<f64>() / history.len() as f64;
+                                    variance.sqrt()
+                                }, trend_result.memory_slope,
+                            ){
+                                if let Some(minutes) = prediction.minutes_to_anomaly{
+                                    ui::section("Prediction");
+                                    println!("At current rate, memory anomaly likely in ~{:.1} minutes (Confidence: {:.0}%)", minutes, prediction.confidence * 100.0);
                                 }
                             }
                         }
