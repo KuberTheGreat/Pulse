@@ -3,6 +3,8 @@ use std::{thread, time::Duration};
 
 use crate::core::history;
 
+const MAX_ENTRIES_PER_PROCESS: usize = 1000;
+
 #[derive(Debug)]
 pub struct SystemSnapshot{
     pub total_memory: u64,
@@ -49,15 +51,21 @@ pub fn inspect_process(name: &str) -> Vec<ProcessSnapshot> {
                 cpu_usage: process.cpu_usage(),
             };
 
-            history_store
+            let entries = history_store
                 .processes
                 .entry(snapshot.name.clone())
-                .or_default()
-                .push(history::ProcessHistoryEntry{
-                    memory: snapshot.memory,
-                    cpu_usage: snapshot.cpu_usage,
-                    timestamp: history::now_ts(),
-                });
+                .or_default();
+
+            entries.push(history::ProcessHistoryEntry{
+                memory: snapshot.memory,
+                cpu_usage: snapshot.cpu_usage,
+                timestamp: history::now_ts(),
+            });
+
+            if entries.len() > MAX_ENTRIES_PER_PROCESS{
+                let excess = entries.len() - MAX_ENTRIES_PER_PROCESS;
+                entries.drain(0..excess);
+            }
             
             results.push(snapshot);
         }
