@@ -49,8 +49,25 @@ fn main(){
                 for p in processes{
                     ui::section(&format!("Process: {} (PID {})", p.name, p.pid));
 
-                    ui::kv("Memory", &format::format_memory_kb(p.memory));
-                    ui::kv("CPU", &format::format_cpu(p.cpu_usage));
+                    if let Some(hist) = history_store.processes.get(&p.name){
+                        let mem_vals: Vec<f64> =hist.iter().rev().take(10).map(|h| h.memory as f64).collect();
+                        let cpu_vals: Vec<f64> =hist.iter().rev().take(10).map(|h| h.cpu_usage as f64).collect();
+
+                        ui::kv("Memory History", &ui::sparkline(&mem_vals));
+                        println!();
+                        ui::kv("CPU History", &ui::sparkline(&cpu_vals));
+                        println!();
+                    }
+                    
+                    let mem_pct = (p.memory as f64 / history_store
+                        .processes
+                        .get(&p.name)
+                        .map(|h| h.iter().map(|e| e.memory).max().unwrap_or(p.memory))
+                        .unwrap_or(p.memory) as f64) * 100.0;
+                    
+                    ui::kv("Memory", &ui::bar(mem_pct.min(100.0), 20));
+                    println!();
+                    ui::kv("CPU", &ui::bar(p.cpu_usage as f64, 20));
                     
                     if let Some(history) = history_store.processes.get(&p.name){
                         // General Trend
